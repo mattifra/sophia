@@ -167,11 +167,12 @@ export const questions: Question[] = [
     stageTitle: "Pianificare e Personalizzare l'Esperienza",
     text: "Ci sono documenti o policy aziendali da INCLUDERE come materiale di riferimento nella knowledge base del corso?",
     explanation:
-      "Integrare documenti ufficiali nella base di conoscenza rende il corso ancorato alla realtà aziendale specifica, non generico.",
-    type: "textarea",
+      "Integrare documenti ufficiali nella base di conoscenza rende il corso ancorato alla realtà aziendale specifica, non generico. Puoi descriverli e/o caricare i file direttamente.",
+    type: "textarea-with-upload",
     placeholder:
       'Es: "Codice Etico aziendale", "Procedura di gestione performance P-HR-012"',
     required: false,
+    acceptedFileTypes: ".pdf,.doc,.docx,.txt,.pptx,.xlsx",
   },
   {
     id: "cited_references",
@@ -179,11 +180,12 @@ export const questions: Question[] = [
     stageTitle: "Pianificare e Personalizzare l'Esperienza",
     text: "Ci sono documenti o policy da CITARE esplicitamente durante la formazione?",
     explanation:
-      "Citare fonti ufficiali durante la formazione rafforza l'autorevolezza del contenuto e allinea il corso alle aspettative normative dell'organizzazione.",
-    type: "textarea",
+      "Citare fonti ufficiali durante la formazione rafforza l'autorevolezza del contenuto e allinea il corso alle aspettative normative dell'organizzazione. Puoi descriverli e/o caricare i file.",
+    type: "textarea-with-upload",
     placeholder:
       'Es: "CCNL di riferimento — Art. 42 sulla formazione obbligatoria", "Policy aziendale sulla sicurezza"',
     required: false,
+    acceptedFileTypes: ".pdf,.doc,.docx,.txt,.pptx,.xlsx",
   },
   {
     id: "duration",

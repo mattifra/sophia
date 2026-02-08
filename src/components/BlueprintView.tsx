@@ -1,6 +1,7 @@
 "use client";
 
-import { CourseBlueprint } from "@/types";
+import { useState } from "react";
+import { CourseBlueprint, AIGeneratedContent } from "@/types";
 
 interface BlueprintViewProps {
   blueprint: CourseBlueprint;
@@ -8,6 +9,35 @@ interface BlueprintViewProps {
 }
 
 export default function BlueprintView({ blueprint, onRestart }: BlueprintViewProps) {
+  const [aiContent, setAiContent] = useState<AIGeneratedContent | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleGenerateAI = async () => {
+    setIsGenerating(true);
+    setAiError(null);
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blueprint }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setAiError(data.error || "Errore nella generazione");
+        return;
+      }
+      setAiContent(data);
+    } catch {
+      setAiError("Errore di connessione. Verifica che il server sia attivo.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const displayTitle = aiContent?.title || blueprint.title;
+  const hasAIContent = !!aiContent;
+
   return (
     <div className="w-full max-w-3xl mx-auto animate-fade-in">
       {/* Header */}
@@ -20,9 +50,9 @@ export default function BlueprintView({ blueprint, onRestart }: BlueprintViewPro
               clipRule="evenodd"
             />
           </svg>
-          Blueprint generato con successo
+          {hasAIContent ? "Contenuti AI generati con successo" : "Blueprint generato con successo"}
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">{blueprint.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{displayTitle}</h1>
       </div>
 
       {/* Blueprint Sections */}
@@ -65,41 +95,141 @@ export default function BlueprintView({ blueprint, onRestart }: BlueprintViewPro
 
         {/* Section 5: Modules */}
         <Section title="Architettura del Corso" icon="🏗️">
-          <div className="space-y-4">
-            {blueprint.modules.map((module) => (
-              <div
-                key={module.number}
-                className="bg-gray-50 rounded-xl p-5 border border-gray-200"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-900">
-                    Modulo {module.number}: {module.title}
-                  </h4>
-                  <span className="text-sm text-indigo-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
-                    {module.duration}
-                  </span>
+          {hasAIContent && aiContent.modules ? (
+            <div className="space-y-4">
+              {aiContent.modules.map((module) => (
+                <div
+                  key={module.number}
+                  className="bg-gray-50 rounded-xl p-5 border border-gray-200"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">
+                      Modulo {module.number}: {module.title}
+                    </h4>
+                    <span className="text-sm text-indigo-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
+                      {module.duration}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    <strong>Obiettivo:</strong> {module.objective}
+                  </p>
+                  {module.content && (
+                    <div className="mb-3 bg-white rounded-lg p-4 border border-indigo-100">
+                      <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+                        Contenuto del Modulo
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">
+                        {module.content}
+                      </p>
+                    </div>
+                  )}
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Attivita:</p>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {module.activities.map((activity, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-indigo-400 mt-0.5">-</span>
+                          {activity}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    <strong>Valutazione:</strong> {module.assessment}
+                  </p>
+                  {module.speakerNotes && (
+                    <div className="mt-3 bg-amber-50 rounded-lg p-3 border border-amber-100">
+                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">
+                        Note per il Facilitatore
+                      </p>
+                      <p className="text-sm text-amber-800 whitespace-pre-line">
+                        {module.speakerNotes}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 mb-3">
-                  <strong>Obiettivo:</strong> {module.objective}
-                </p>
-                <div className="mb-3">
-                  <p className="text-sm font-medium text-gray-700 mb-1">Attivita:</p>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {module.activities.map((activity, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-indigo-400 mt-0.5">-</span>
-                        {activity}
-                      </li>
-                    ))}
-                  </ul>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {blueprint.modules.map((module) => (
+                <div
+                  key={module.number}
+                  className="bg-gray-50 rounded-xl p-5 border border-gray-200"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">
+                      Modulo {module.number}: {module.title}
+                    </h4>
+                    <span className="text-sm text-indigo-600 font-medium bg-indigo-50 px-3 py-1 rounded-full">
+                      {module.duration}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    <strong>Obiettivo:</strong> {module.objective}
+                  </p>
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Attivita:</p>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {module.activities.map((activity, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-indigo-400 mt-0.5">-</span>
+                          {activity}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    <strong>Valutazione:</strong> {module.assessment}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">
-                  <strong>Valutazione:</strong> {module.assessment}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Section>
+
+        {/* AI Generation Section */}
+        {!hasAIContent && (
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-200 p-6 text-center">
+            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Genera Contenuti con AI
+            </h3>
+            <p className="text-sm text-gray-600 mb-4 max-w-md mx-auto">
+              Usa OpenAI per arricchire ogni modulo con contenuti dettagliati, attivita specifiche e note per il facilitatore.
+            </p>
+            {aiError && (
+              <div className="mb-4 bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm">
+                {aiError}
+              </div>
+            )}
+            <button
+              onClick={handleGenerateAI}
+              disabled={isGenerating}
+              className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                isGenerating
+                  ? "bg-indigo-300 text-white cursor-wait"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200"
+              }`}
+            >
+              {isGenerating ? (
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generazione in corso...
+                </span>
+              ) : (
+                "Genera con AI"
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -112,8 +242,10 @@ export default function BlueprintView({ blueprint, onRestart }: BlueprintViewPro
         </button>
         <button
           onClick={() => {
-            // Future: export to PDF/JSON
-            const dataStr = JSON.stringify(blueprint, null, 2);
+            const exportData = hasAIContent
+              ? { ...blueprint, aiContent }
+              : blueprint;
+            const dataStr = JSON.stringify(exportData, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");

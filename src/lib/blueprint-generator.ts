@@ -1,4 +1,4 @@
-import { Answer, CourseBlueprint, CourseModule } from "@/types";
+import { CourseBlueprint, CourseModule, UploadedFile } from "@/types";
 import { questions } from "@/data/questions";
 
 function getAnswer(answers: Record<string, string | string[]>, id: string): string {
@@ -23,7 +23,6 @@ function getLabelForValue(questionId: string, value: string): string {
 
 function generateTitle(answers: Record<string, string | string[]>): string {
   const transfer = getAnswer(answers, "transfer_objective");
-  // Extract key action from transfer objective
   const words = transfer.split(" ").slice(0, 8).join(" ");
   return `Corso: ${words}${transfer.split(" ").length > 8 ? "..." : ""}`;
 }
@@ -35,12 +34,9 @@ function generateModules(answers: Record<string, string | string[]>): CourseModu
     : getAnswer(answers, "duration");
   const strategy = getAnswer(answers, "teaching_strategy");
   const assessments = getAnswerArray(answers, "assessment_methods");
-  const transfer = getAnswer(answers, "transfer_objective");
-  const scenarios = getAnswer(answers, "scenarios");
 
   const modules: CourseModule[] = [];
 
-  // Module 1: Always present - Foundation/Context
   modules.push({
     number: 1,
     title: "Contesto e Obiettivi",
@@ -54,7 +50,6 @@ function generateModules(answers: Record<string, string | string[]>): CourseModu
     assessment: "Check-in iniziale: autovalutazione competenze",
   });
 
-  // Module 2: Core Knowledge
   modules.push({
     number: 2,
     title: "Concetti Chiave e Framework",
@@ -66,7 +61,6 @@ function generateModules(answers: Record<string, string | string[]>): CourseModu
       : "Discussione guidata di verifica",
   });
 
-  // Module 3: Application (if depth >= applicare)
   if (depth === "applicare" || depth === "risolvere") {
     modules.push({
       number: 3,
@@ -80,7 +74,6 @@ function generateModules(answers: Record<string, string | string[]>): CourseModu
     });
   }
 
-  // Module 4: Problem Solving (if depth === risolvere)
   if (depth === "risolvere") {
     modules.push({
       number: modules.length + 1,
@@ -99,7 +92,6 @@ function generateModules(answers: Record<string, string | string[]>): CourseModu
     });
   }
 
-  // Final Module: Wrap-up & Action Plan
   modules.push({
     number: modules.length + 1,
     title: "Piano d'Azione Personale",
@@ -122,18 +114,14 @@ function getDurationForModule(
   moduleIndex: number,
   depth: string
 ): string {
-  // Simple heuristic based on total duration
   const hours = parseDurationToHours(totalDuration);
-  const totalModules =
-    depth === "risolvere" ? 5 : depth === "applicare" ? 4 : 3;
 
-  // Distribute time: intro gets less, core gets more
   const weights: Record<number, number> = {
-    1: 0.15, // Intro
-    2: 0.3, // Core knowledge
-    3: 0.25, // Application
-    4: 0.2, // Problem solving
-    5: 0.1, // Wrap-up
+    1: 0.15,
+    2: 0.3,
+    3: 0.25,
+    4: 0.2,
+    5: 0.1,
   };
 
   const moduleHours = Math.max(0.25, hours * (weights[moduleIndex] || 0.2));
@@ -148,7 +136,6 @@ function parseDurationToHours(duration: string): number {
   if (duration === "4h") return 4;
   if (duration === "8h") return 8;
   if (duration === "16h") return 16;
-  // Try to extract number from custom string
   const match = duration.match(/(\d+)/);
   return match ? parseInt(match[1]) : 8;
 }
@@ -223,13 +210,38 @@ function getActivitiesForStrategy(
   return activities[strategy]?.[phase] || activities.scenario[phase];
 }
 
+function formatUploadedDocs(
+  textAnswer: string,
+  files: UploadedFile[]
+): string {
+  const parts: string[] = [];
+  if (textAnswer) parts.push(textAnswer);
+  if (files.length > 0) {
+    const fileNames = files.map((f) => f.name).join(", ");
+    parts.push(`Documenti caricati: ${fileNames}`);
+  }
+  return parts.join("\n") || "Nessun documento specificato";
+}
+
 export function generateBlueprint(
-  answers: Record<string, string | string[]>
+  answers: Record<string, string | string[]>,
+  uploadedFiles?: Record<string, UploadedFile[]>
 ): CourseBlueprint {
   const duration =
     getAnswer(answers, "duration") === "custom"
       ? getAnswer(answers, "duration_custom") || "Da definire"
       : getLabelForValue("duration", getAnswer(answers, "duration"));
+
+  const includedFiles = uploadedFiles?.["included_references"] || [];
+  const citedFiles = uploadedFiles?.["cited_references"] || [];
+
+  const uploadedDocuments: { questionId: string; files: UploadedFile[] }[] = [];
+  if (includedFiles.length > 0) {
+    uploadedDocuments.push({ questionId: "included_references", files: includedFiles });
+  }
+  if (citedFiles.length > 0) {
+    uploadedDocuments.push({ questionId: "cited_references", files: citedFiles });
+  }
 
   return {
     title: generateTitle(answers),
@@ -245,11 +257,18 @@ export function generateBlueprint(
     resistanceReasons: getAnswer(answers, "resistance"),
     scenarios: getAnswer(answers, "scenarios"),
     excludedContent: getAnswer(answers, "excluded_content") || "Nessuna esclusione specificata",
-    includedReferences: getAnswer(answers, "included_references") || "Nessun documento specificato",
-    citedReferences: getAnswer(answers, "cited_references") || "Nessun documento specificato",
+    includedReferences: formatUploadedDocs(
+      getAnswer(answers, "included_references"),
+      includedFiles
+    ),
+    citedReferences: formatUploadedDocs(
+      getAnswer(answers, "cited_references"),
+      citedFiles
+    ),
     duration,
     toneOfVoice: getLabelForValue("tone", getAnswer(answers, "tone")),
     teachingStrategy: getLabelForValue("teaching_strategy", getAnswer(answers, "teaching_strategy")),
     modules: generateModules(answers),
+    uploadedDocuments: uploadedDocuments.length > 0 ? uploadedDocuments : undefined,
   };
 }

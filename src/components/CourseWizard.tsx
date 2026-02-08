@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { questions } from "@/data/questions";
-import { CourseBlueprint, Stage } from "@/types";
+import { CourseBlueprint, Stage, UploadedFile } from "@/types";
 import { generateBlueprint } from "@/lib/blueprint-generator";
 import ProgressBar from "./ProgressBar";
 import StageIntro from "./StageIntro";
@@ -16,6 +16,7 @@ export default function CourseWizard() {
   const [currentStage, setCurrentStage] = useState<Stage>(1);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFile[]>>({});
   const [blueprint, setBlueprint] = useState<CourseBlueprint | null>(null);
 
   // Filter questions: skip duration_custom if duration is not "custom"
@@ -42,6 +43,13 @@ export default function CourseWizard() {
     []
   );
 
+  const handleFilesChange = useCallback(
+    (questionId: string, files: UploadedFile[]) => {
+      setUploadedFiles((prev) => ({ ...prev, [questionId]: files }));
+    },
+    []
+  );
+
   const handleNext = useCallback(() => {
     if (currentQuestionIndex < stageQuestions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
@@ -53,11 +61,11 @@ export default function CourseWizard() {
       setPhase("stage-intro");
     } else {
       // All done - generate blueprint
-      const bp = generateBlueprint(answers);
+      const bp = generateBlueprint(answers, uploadedFiles);
       setBlueprint(bp);
       setPhase("complete");
     }
-  }, [currentQuestionIndex, stageQuestions.length, currentStage, answers]);
+  }, [currentQuestionIndex, stageQuestions.length, currentStage, answers, uploadedFiles]);
 
   const handleBack = useCallback(() => {
     if (currentQuestionIndex > 0) {
@@ -77,6 +85,7 @@ export default function CourseWizard() {
     setCurrentStage(1);
     setCurrentQuestionIndex(0);
     setAnswers({});
+    setUploadedFiles({});
     setBlueprint(null);
   }, []);
 
@@ -126,14 +135,14 @@ export default function CourseWizard() {
                 </span>
                 Risultati
               </div>
-              <div className="hidden sm:block text-gray-300">→</div>
+              <div className="hidden sm:block text-gray-300">&rarr;</div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
                   2
                 </span>
                 Valutazione
               </div>
-              <div className="hidden sm:block text-gray-300">→</div>
+              <div className="hidden sm:block text-gray-300">&rarr;</div>
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
                   3
@@ -185,7 +194,9 @@ export default function CourseWizard() {
           key={currentQuestion.id}
           question={currentQuestion}
           currentAnswer={answers[currentQuestion.id]}
+          currentFiles={uploadedFiles[currentQuestion.id] || []}
           onAnswer={handleAnswer}
+          onFilesChange={handleFilesChange}
           onNext={handleNext}
           onBack={handleBack}
           canGoBack={canGoBack}

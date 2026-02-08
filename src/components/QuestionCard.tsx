@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Question } from "@/types";
+import { Question, UploadedFile } from "@/types";
+import FileUpload from "./FileUpload";
 
 interface QuestionCardProps {
   question: Question;
   currentAnswer: string | string[] | undefined;
+  currentFiles: UploadedFile[];
   onAnswer: (questionId: string, value: string | string[]) => void;
+  onFilesChange: (questionId: string, files: UploadedFile[]) => void;
   onNext: () => void;
   onBack: () => void;
   canGoBack: boolean;
@@ -16,7 +19,9 @@ interface QuestionCardProps {
 export default function QuestionCard({
   question,
   currentAnswer,
+  currentFiles,
   onAnswer,
+  onFilesChange,
   onNext,
   onBack,
   canGoBack,
@@ -50,6 +55,12 @@ export default function QuestionCard({
     }
     if (question.type === "single-choice") {
       return typeof currentAnswer === "string" && currentAnswer.length > 0;
+    }
+    if (question.type === "textarea-with-upload") {
+      // Valid if text is provided OR files are uploaded
+      const hasText = typeof currentAnswer === "string" && currentAnswer.trim().length > 0;
+      const hasFiles = currentFiles.length > 0;
+      return hasText || hasFiles;
     }
     return typeof currentAnswer === "string" && currentAnswer.trim().length > 0;
   };
@@ -90,6 +101,24 @@ export default function QuestionCard({
               rows={4}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder:text-gray-400 resize-none transition-colors"
             />
+          )}
+
+          {/* Textarea with file upload */}
+          {question.type === "textarea-with-upload" && (
+            <div>
+              <textarea
+                value={textValue}
+                onChange={(e) => handleTextChange(e.target.value)}
+                placeholder={question.placeholder}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder:text-gray-400 resize-none transition-colors"
+              />
+              <FileUpload
+                files={currentFiles}
+                onFilesChange={(files) => onFilesChange(question.id, files)}
+                acceptedTypes={question.acceptedFileTypes}
+              />
+            </div>
           )}
 
           {/* Single choice */}

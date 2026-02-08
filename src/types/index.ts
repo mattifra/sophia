@@ -1,4 +1,4 @@
-export type QuestionType = "text" | "textarea" | "single-choice" | "multi-choice";
+export type QuestionType = "text" | "textarea" | "single-choice" | "multi-choice" | "textarea-with-upload";
 
 export type Stage = 1 | 2 | 3;
 
@@ -18,6 +18,14 @@ export interface Question {
   options?: QuestionOption[];
   placeholder?: string;
   required: boolean;
+  acceptedFileTypes?: string;
+}
+
+export interface UploadedFile {
+  name: string;
+  size: number;
+  type: string;
+  content: string; // base64 or extracted text
 }
 
 export interface Answer {
@@ -43,6 +51,7 @@ export interface CourseBlueprint {
   toneOfVoice: string;
   teachingStrategy: string;
   modules: CourseModule[];
+  uploadedDocuments?: { questionId: string; files: UploadedFile[] }[];
 }
 
 export interface CourseModule {
@@ -52,4 +61,20 @@ export interface CourseModule {
   duration: string;
   activities: string[];
   assessment: string;
+}
+
+export interface AIGeneratedContent {
+  title: string;
+  modules: AIModule[];
+}
+
+export interface AIModule {
+  number: number;
+  title: string;
+  objective: string;
+  duration: string;
+  content: string;
+  activities: string[];
+  assessment: string;
+  speakerNotes: string;
 }
